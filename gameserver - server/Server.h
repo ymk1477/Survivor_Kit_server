@@ -29,7 +29,8 @@ typedef struct SOCKETINFORM {
 typedef struct RECVOBJECT {
 	int clientId;
 	bool isUsed[MAX_USER] = { false };
-	bool keyBuffer[MAX_BUFFER];
+	//bool keyBuffer[MAX_BUFFER];
+	Location clientLoc;
 }R_Obj;
 
 typedef struct SENDOBJECT {

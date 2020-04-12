@@ -6,13 +6,20 @@ using namespace std;
 int id = 0;
 
 SockInf g_clients[MAX_USER];
-R_Obj recvInform;;
+R_Obj recvInform;
 S_Obj sendInform;
 Player_Obj PLAYER[MAX_USER];
 
 void CALLBACK recv_callback(DWORD Error, DWORD dataBytes, LPWSAOVERLAPPED overlapped, DWORD lnFlags)
 {
 	int clientId = reinterpret_cast<int>(overlapped->hEvent);
+
+	/*if (WSAGetLastError() == WSA_INVALID_HANDLE) {
+		cout << clientId << "번 "<< "플레이어 비정상 종료" << endl;
+		g_clients[clientId].isUsed = false;
+		recvInform.isUsed[clientId] = false;
+		return;
+	}*/
 
 	if (dataBytes == 0) {
 		closesocket(g_clients[clientId].socket);
@@ -22,20 +29,26 @@ void CALLBACK recv_callback(DWORD Error, DWORD dataBytes, LPWSAOVERLAPPED overla
 		return;
 	}
 
-	for (int i = 0; i < MAX_USER; ++i) {
+	/*for (int i = 0; i < MAX_USER; ++i) {
 		sendInform.isUsed[i] = g_clients[i].isUsed;
-		sendInform.clientLoc[i] = g_clients[i].clientLoc;
-	}
+	}*/
 
-	cout << "X : " << g_clients[clientId].clientLoc.x << ", Y : " << g_clients[clientId].clientLoc.y << ", Z : " << g_clients[clientId].clientLoc.z << endl;
+	//g_clients[clientId].isUsed = recvInform.isUsed;
 
+	//g_clients[clientId].clientLoc = recvInform.clientLoc;
+	//Location* tmp = reinterpret_cast<Location*>(g_clients[clientId].over.dataBuffer.buf);
+	R_Obj* tmp= reinterpret_cast<R_Obj*>(g_clients[clientId].over.dataBuffer.buf);
+
+	cout << clientId  + 1<< "번 플레이어 Location recv" << endl;
+	cout << "X : " << tmp->clientLoc.x  << ", Y : " << tmp->clientLoc.y << ", Z : " << tmp->clientLoc.z << endl;
+	
 	// 클라이언트가 closesocket을 했을 경우
 	g_clients[clientId].over.dataBuffer.len = sizeof(sendInform);
 	memset(&(g_clients[clientId].over.overlapped), 0x00, sizeof(WSAOVERLAPPED));
 	g_clients[clientId].over.overlapped.hEvent = (HANDLE)clientId;
 	
-
 	g_clients[clientId].over.dataBuffer.buf = reinterpret_cast<char*>(&sendInform);
+	
 	// &dataBytes -> 이거 리턴받는건데 비우는게 더 좋다고 말씀하셨음.
 	WSASend(g_clients[clientId].socket, &(g_clients[clientId].over.dataBuffer), 1, NULL, 0,
 		&(g_clients[clientId].over.overlapped), send_callback);
@@ -63,6 +76,7 @@ void CALLBACK send_callback(DWORD Error, DWORD dataBytes, LPWSAOVERLAPPED overla
 	cout << "xPos: " << g_clients[clientId].clientLoc.x << ", yPos : " << g_clients[clientId].clientLoc.y << endl;*/
 
 	memset(&(g_clients[clientId].over.overlapped), 0x00, sizeof(WSAOVERLAPPED));
+	g_clients[clientId].over.dataBuffer.len = MAX_BUFFER;
 	g_clients[clientId].over.overlapped.hEvent = (HANDLE)clientId;
 
 	WSARecv(g_clients[clientId].socket, &g_clients[clientId].over.dataBuffer, 1, 0, &flags,
@@ -133,9 +147,14 @@ int main()
 
 		// 1은 버퍼의 개수! 우리는 하나 쓸 것이다. 무턱대고 MAX쓰면 안 돼.
 		// Recv 처리는 'recv_callback' 에서 한다.
-		WSASend(g_clients[id].socket, &g_clients[id].over.dataBuffer, 1, NULL,
-			0, &(g_clients[id].over.overlapped), send_callback);
+
+		/*	WSASend(g_clients[id].socket, &g_clients[id].over.dataBuffer, 1, NULL,
+			0, &(g_clients[id].over.overlapped), send_callback);*/
+
+		WSARecv(g_clients[id].socket, &g_clients[id].over.dataBuffer, 1, 0, &flags,
+			&(g_clients[id].over.overlapped), recv_callback);
 	}
+
 	closesocket(listenSocket);
 	WSACleanup();
 }
