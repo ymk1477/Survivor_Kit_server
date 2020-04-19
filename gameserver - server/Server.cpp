@@ -1,6 +1,8 @@
 #include "Server.h"
+#include <stdio.h>
 
 using namespace std;
+
 #pragma comment(lib, "Ws2_32.lib") 
 
 int id = 0;
@@ -10,16 +12,10 @@ R_Obj recvInform;
 S_Obj sendInform;
 Player_Obj PLAYER[MAX_USER];
 
+
 void CALLBACK recv_callback(DWORD Error, DWORD dataBytes, LPWSAOVERLAPPED overlapped, DWORD lnFlags)
 {
 	int clientId = reinterpret_cast<int>(overlapped->hEvent);
-
-	/*if (WSAGetLastError() == WSA_INVALID_HANDLE) {
-		cout << clientId << "번 "<< "플레이어 비정상 종료" << endl;
-		g_clients[clientId].isUsed = false;
-		recvInform.isUsed[clientId] = false;
-		return;
-	}*/
 
 	if (dataBytes == 0) {
 		closesocket(g_clients[clientId].socket);
@@ -29,14 +25,6 @@ void CALLBACK recv_callback(DWORD Error, DWORD dataBytes, LPWSAOVERLAPPED overla
 		return;
 	}
 
-	/*for (int i = 0; i < MAX_USER; ++i) {
-		sendInform.isUsed[i] = g_clients[i].isUsed;
-	}*/
-
-	//g_clients[clientId].isUsed = recvInform.isUsed;
-
-	//g_clients[clientId].clientLoc = recvInform.clientLoc;
-	//Location* tmp = reinterpret_cast<Location*>(g_clients[clientId].over.dataBuffer.buf);
 	R_Obj* tmp= reinterpret_cast<R_Obj*>(g_clients[clientId].over.dataBuffer.buf);
 
 	cout << clientId  + 1<< "번 플레이어 Location recv" << endl;
@@ -69,8 +57,18 @@ void CALLBACK send_callback(DWORD Error, DWORD dataBytes, LPWSAOVERLAPPED overla
 		return;
 	}
 
-	g_clients[clientId].over.dataBuffer.len = sizeof(recvInform);
-	g_clients[clientId].over.dataBuffer.buf = reinterpret_cast<char*>(&recvInform);
+
+	/*g_clients[clientId].over.dataBuffer.len = sizeof(recvInform);
+	g_clients[clientId].over.dataBuffer.buf = reinterpret_cast<char*>(&recvInform);*/
+
+	P_tmp MESSAGE;
+
+	MESSAGE.my_num = 29425993;
+	g_clients[clientId].over.dataBuffer.len = sizeof(MESSAGE);
+	g_clients[clientId].over.dataBuffer.buf = reinterpret_cast<char*>(&MESSAGE);
+
+	cout << MESSAGE.my_num << endl;
+	cout << (string)g_clients[clientId].over.dataBuffer.buf << endl;
 
 	/*cout << clientId + 1 << "번 플레이어" << endl;
 	cout << "xPos: " << g_clients[clientId].clientLoc.x << ", yPos : " << g_clients[clientId].clientLoc.y << endl;*/
