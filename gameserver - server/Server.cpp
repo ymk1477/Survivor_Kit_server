@@ -147,20 +147,21 @@ int main()
 
 void Recv_Packet(int clientId, char* buf) {
 
-	R_packet* PACKET = reinterpret_cast<R_packet*>(buf);
-
 	R_Test* Test = reinterpret_cast<R_Test*>(buf);
 	switch (Test->packet_type) {
 		case PACKET_CS_LOCATION:
 		{
 			R_Loc* pa = reinterpret_cast<R_Loc*>(buf);
-			cout << clientId + 1<< "번 플레이어 Location - ";
-			cout << "X : " << pa->clientLoc.x << ", Y : " << pa->clientLoc.y << ", Z : " << pa->clientLoc.z << endl;
+			cout << clientId + 1<< "번 플레이어 Location ( ";
+			cout << "X : " << pa->clientLoc.x << ", Y : " << pa->clientLoc.y << ", Z : " << pa->clientLoc.z << ")"<< endl;
+			cout << "//////////////////////////////////////////////////////////////////" << endl;
 		}
 			break;
-		case PACKET_CS_TEST:
+		case PACKET_CS_JUMP:
 		{
+			S_Login* packet = reinterpret_cast<S_Login*>(buf);
 			cout << clientId + 1 << "번 플레이어 Jump!" << endl;
+			cout << "//////////////////////////////////////////////////////////////////" << endl;
 		}
 			break;
 	}

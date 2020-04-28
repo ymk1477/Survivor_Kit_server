@@ -10,12 +10,12 @@ using namespace std;
 #define SERVER_PORT 9000
 #define MAX_USER 4
 
-#define PACKET_SC_LOGIN 101
-#define PACKET_SC_LOCATION 102
+#define PACKET_SC_LOGIN 100
+#define PACKET_SC_LOCATION 101
+#define PACKET_SC_JUMP 102
 
-#define PACKET_CS_LOGIN 201
-#define PACKET_CS_LOCATION 202
-#define PACKET_CS_TEST 10
+#define PACKET_CS_LOCATION 201
+#define PACKET_CS_JUMP 202
 
 typedef struct LOCATION {
 	float x;
@@ -33,7 +33,6 @@ typedef struct SOCKETINFORM {
 	SOCKET socket;
 	int clientId;
 	bool isUsed = false;
-	Location clientLoc = { 0, 0, 0 };
 }SockInf;
 
 typedef struct RECVOBJECT {
@@ -54,20 +53,21 @@ typedef struct PLAYER {
 	Location clientLoc = { 0 ,0, 0 };
 }Player_Obj;
 
-typedef struct Process_Packet {
+typedef struct Test_Packet {
 	int packet_type;
-	void* Buffer;
-}R_packet;
+	int i;
+}R_Test;
 
 typedef struct Recv_Packet_Location {
 	int packet_type;
 	Location clientLoc;
 }R_Loc;
 
-typedef struct Test_Packet {
-	int packet_type;
-	int i;
-}R_Test;
+typedef struct Send_Packet_Login {
+	int packet_type = PACKET_SC_LOGIN;
+	int clientId;
+	bool Player[4];
+}S_Login;
 
 void CALLBACK recv_callback(DWORD Error, DWORD dataBytes, LPWSAOVERLAPPED overlapped, DWORD lnFlags);
 void CALLBACK send_callback(DWORD Error, DWORD dataBytes, LPWSAOVERLAPPED overlapped, DWORD lnFlags);
