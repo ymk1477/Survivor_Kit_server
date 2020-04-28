@@ -17,6 +17,7 @@ void CALLBACK recv_callback(DWORD Error, DWORD dataBytes, LPWSAOVERLAPPED overla
 {
 	int clientId = reinterpret_cast<int>(overlapped->hEvent);
 
+	// 클라이언트가 closesocket을 했을 경우
 	if (dataBytes == 0) {
 		closesocket(g_clients[clientId].socket);
 		cout << clientId + 1 << "번 플레이어 나감" << endl;
@@ -24,18 +25,22 @@ void CALLBACK recv_callback(DWORD Error, DWORD dataBytes, LPWSAOVERLAPPED overla
 		recvInform.isUsed[clientId] = false;
 		return;
 	}
-
-	R_Obj* tmp= reinterpret_cast<R_Obj*>(g_clients[clientId].over.dataBuffer.buf);
-
-	cout << clientId  + 1<< "번 플레이어 Location recv" << endl;
-	cout << "X : " << tmp->clientLoc.x  << ", Y : " << tmp->clientLoc.y << ", Z : " << tmp->clientLoc.z << endl;
 	
-	// 클라이언트가 closesocket을 했을 경우
-	g_clients[clientId].over.dataBuffer.len = sizeof(sendInform);
+
+	Recv_Packet(clientId, g_clients[clientId].over.dataBuffer.buf);
+	
+
+	Player_Obj MESSAGE;
+	MESSAGE.clientid = clientId;
+	MESSAGE.clientLoc = PLAYER[clientId].clientLoc;
+
+	g_clients[clientId].over.dataBuffer.len = sizeof(MESSAGE);
 	memset(&(g_clients[clientId].over.overlapped), 0x00, sizeof(WSAOVERLAPPED));
 	g_clients[clientId].over.overlapped.hEvent = (HANDLE)clientId;
-	
-	g_clients[clientId].over.dataBuffer.buf = reinterpret_cast<char*>(&sendInform);
+		
+	g_clients[clientId].over.dataBuffer.buf = reinterpret_cast<char*>(&MESSAGE);
+
+	//g_clients[clientId].over.dataBuffer.buf = reinterpret_cast<char*>(&sendInform);
 	
 	// &dataBytes -> 이거 리턴받는건데 비우는게 더 좋다고 말씀하셨음.
 	WSASend(g_clients[clientId].socket, &(g_clients[clientId].over.dataBuffer), 1, NULL, 0,
@@ -56,25 +61,11 @@ void CALLBACK send_callback(DWORD Error, DWORD dataBytes, LPWSAOVERLAPPED overla
 		sendInform.isUsed[clientId] = false;
 		return;
 	}
-
-
-	/*g_clients[clientId].over.dataBuffer.len = sizeof(recvInform);
-	g_clients[clientId].over.dataBuffer.buf = reinterpret_cast<char*>(&recvInform);*/
-
-	P_tmp MESSAGE;
-
-	MESSAGE.my_num = 29425993;
-	g_clients[clientId].over.dataBuffer.len = sizeof(MESSAGE);
-	g_clients[clientId].over.dataBuffer.buf = reinterpret_cast<char*>(&MESSAGE);
-
-	cout << MESSAGE.my_num << endl;
-	cout << (string)g_clients[clientId].over.dataBuffer.buf << endl;
-
-	/*cout << clientId + 1 << "번 플레이어" << endl;
-	cout << "xPos: " << g_clients[clientId].clientLoc.x << ", yPos : " << g_clients[clientId].clientLoc.y << endl;*/
+	
+	g_clients[clientId].over.dataBuffer.len = MAX_BUFFER;
+	g_clients[clientId].over.dataBuffer.buf = reinterpret_cast<char*>(&recvInform);
 
 	memset(&(g_clients[clientId].over.overlapped), 0x00, sizeof(WSAOVERLAPPED));
-	g_clients[clientId].over.dataBuffer.len = MAX_BUFFER;
 	g_clients[clientId].over.overlapped.hEvent = (HANDLE)clientId;
 
 	WSARecv(g_clients[clientId].socket, &g_clients[clientId].over.dataBuffer, 1, 0, &flags,
@@ -126,18 +117,18 @@ int main()
 
 		memset(&g_clients[id], 0x00, sizeof(SockInf));
 		g_clients[id].socket = clientSocket;
-		g_clients[id].over.dataBuffer.len = sizeof(sendInform);
-		g_clients[id].over.dataBuffer.buf = reinterpret_cast<char*>(&sendInform);
+		g_clients[id].over.dataBuffer.len = sizeof(recvInform);
+		g_clients[id].over.dataBuffer.buf = reinterpret_cast<char*>(&recvInform);
 		ZeroMemory(&(g_clients[id].over.overlapped), sizeof(WSAOVERLAPPED));
 		g_clients[id].clientId = id;
 		g_clients[id].isUsed = true;
 		flags = 0;
 
-		sendInform.clientId = id;
+		recvInform.clientId = id;
 		for (int i = 0; i < MAX_USER; ++i) {
 			if (true == g_clients[i].isUsed) {
 				//sendInform.clientPos[i] = g_clients[i].clientPos;
-				sendInform.isUsed[i] = g_clients[i].isUsed;
+				recvInform.isUsed[i] = g_clients[i].isUsed;
 			}
 		}
 
@@ -146,13 +137,35 @@ int main()
 		// 1은 버퍼의 개수! 우리는 하나 쓸 것이다. 무턱대고 MAX쓰면 안 돼.
 		// Recv 처리는 'recv_callback' 에서 한다.
 
-		/*	WSASend(g_clients[id].socket, &g_clients[id].over.dataBuffer, 1, NULL,
-			0, &(g_clients[id].over.overlapped), send_callback);*/
-
 		WSARecv(g_clients[id].socket, &g_clients[id].over.dataBuffer, 1, 0, &flags,
 			&(g_clients[id].over.overlapped), recv_callback);
 	}
 
 	closesocket(listenSocket);
 	WSACleanup();
+}
+
+void Recv_Packet(int clientId, char* buf) {
+
+	R_packet* PACKET = reinterpret_cast<R_packet*>(buf);
+
+	R_Test* Test = reinterpret_cast<R_Test*>(buf);
+	switch (Test->packet_type) {
+		case PACKET_CS_LOCATION:
+		{
+			R_Loc* pa = reinterpret_cast<R_Loc*>(buf);
+			cout << clientId + 1<< "번 플레이어 Location - ";
+			cout << "X : " << pa->clientLoc.x << ", Y : " << pa->clientLoc.y << ", Z : " << pa->clientLoc.z << endl;
+		}
+			break;
+		case PACKET_CS_TEST:
+		{
+			cout << clientId + 1 << "번 플레이어 Jump!" << endl;
+		}
+			break;
+	}
+}
+
+void Send_Packet(void* packet) {
+
 }
