@@ -10,8 +10,7 @@ int id = 0;
 SockInf g_clients[MAX_USER];
 R_Obj recvInform;
 S_Obj sendInform;
-Player_Obj PLAYER[MAX_USER];
-
+Player Player_Info;
 
 void CALLBACK recv_callback(DWORD Error, DWORD dataBytes, LPWSAOVERLAPPED overlapped, DWORD lnFlags)
 {
@@ -29,22 +28,22 @@ void CALLBACK recv_callback(DWORD Error, DWORD dataBytes, LPWSAOVERLAPPED overla
 
 	Recv_Packet(clientId, g_clients[clientId].over.dataBuffer.buf);
 	
-
-	Player_Obj MESSAGE;
-	MESSAGE.clientid = clientId;
-	MESSAGE.clientLoc = PLAYER[clientId].clientLoc;
-
-	g_clients[clientId].over.dataBuffer.len = sizeof(MESSAGE);
+	//Send_Packet(g_clients[clientId].over.dataBuffer.buf);
+	
+	/*g_clients[clientId].over.dataBuffer.len = sizeof(Player_Info);
 	memset(&(g_clients[clientId].over.overlapped), 0x00, sizeof(WSAOVERLAPPED));
 	g_clients[clientId].over.overlapped.hEvent = (HANDLE)clientId;
 		
-	g_clients[clientId].over.dataBuffer.buf = reinterpret_cast<char*>(&MESSAGE);
-
-	//g_clients[clientId].over.dataBuffer.buf = reinterpret_cast<char*>(&sendInform);
-	
+	g_clients[clientId].over.dataBuffer.buf = reinterpret_cast<char*>(&Player_Info);*/
+		
 	// &dataBytes -> 이거 리턴받는건데 비우는게 더 좋다고 말씀하셨음.
-	WSASend(g_clients[clientId].socket, &(g_clients[clientId].over.dataBuffer), 1, NULL, 0,
-		&(g_clients[clientId].over.overlapped), send_callback);
+
+	/*for (int i = 0; i < MAX_USER; ++i) {
+		if (Player_Info.IsUsed[i]) {*/
+			WSASend(g_clients[clientId].socket, &(g_clients[clientId].over.dataBuffer), 1, NULL, 0,
+				&(g_clients[clientId].over.overlapped), send_callback);
+	/*	}
+	}*/
 }
 
 void CALLBACK send_callback(DWORD Error, DWORD dataBytes, LPWSAOVERLAPPED overlapped, DWORD lnFlags)
@@ -127,8 +126,8 @@ int main()
 		recvInform.clientId = id;
 		for (int i = 0; i < MAX_USER; ++i) {
 			if (true == g_clients[i].isUsed) {
-				//sendInform.clientPos[i] = g_clients[i].clientPos;
 				recvInform.isUsed[i] = g_clients[i].isUsed;
+				Player_Info.IsUsed[i] = g_clients[i].isUsed;
 			}
 		}
 
@@ -148,25 +147,61 @@ int main()
 void Recv_Packet(int clientId, char* buf) {
 
 	R_Test* Test = reinterpret_cast<R_Test*>(buf);
-	switch (Test->packet_type) {
+	S_Players tmp;
+
+	if (Test->packet_type == PACKET_CS_LOGIN) {
+		cout << clientId + 1 << "번 플레이어 Login! " << endl;
+		Player_Info.IsUsed[clientId] = true;
+
+		S_Login tmp;
+		tmp.clientId = clientId;
+		for (int i = 0; i < MAX_USER; ++i) {
+			tmp.Player[i] = Player_Info.IsUsed[i];
+		}
+
+		g_clients[clientId].over.dataBuffer.len = sizeof(tmp);
+		memset(&(g_clients[clientId].over.overlapped), 0x00, sizeof(WSAOVERLAPPED));
+		g_clients[clientId].over.overlapped.hEvent = (HANDLE)clientId;
+
+		g_clients[clientId].over.dataBuffer.buf = reinterpret_cast<char*>(&tmp);
+	}
+	else {
+		switch (Test->packet_type)
+		{
 		case PACKET_CS_LOCATION:
 		{
-			R_Loc* pa = reinterpret_cast<R_Loc*>(buf);
-			cout << clientId + 1<< "번 플레이어 Location ( ";
-			cout << "X : " << pa->clientLoc.x << ", Y : " << pa->clientLoc.y << ", Z : " << pa->clientLoc.z << ")"<< endl;
+			R_Loc* packet = reinterpret_cast<R_Loc*>(buf);
+			cout << clientId + 1 << "번 플레이어 Location ( ";
+			cout << "X : " << packet->clientLoc.x << ", Y : " << packet->clientLoc.y << ", Z : " << packet->clientLoc.z << ")" << endl;
 			cout << "//////////////////////////////////////////////////////////////////" << endl;
+			Player_Info.Loc[clientId] = packet->clientLoc;
 		}
-			break;
+		break;
 		case PACKET_CS_JUMP:
 		{
-			S_Login* packet = reinterpret_cast<S_Login*>(buf);
+			R_Jump* packet = reinterpret_cast<R_Jump*>(buf);
 			cout << clientId + 1 << "번 플레이어 Jump!" << endl;
 			cout << "//////////////////////////////////////////////////////////////////" << endl;
+			Player_Info.IsJump[clientId] = true;
 		}
-			break;
+		break;
+		}
+
+		
+		for (int i = 0; i < MAX_USER; ++i) {
+			tmp.IsUsed[i] = Player_Info.IsUsed[i];
+			tmp.Loc[i] = Player_Info.Loc[i];
+			tmp.IsUsed[i] = Player_Info.IsJump[i];
+		}
+
+		g_clients[clientId].over.dataBuffer.len = sizeof(tmp);
+		memset(&(g_clients[clientId].over.overlapped), 0x00, sizeof(WSAOVERLAPPED));
+		g_clients[clientId].over.overlapped.hEvent = (HANDLE)clientId;
+
+		g_clients[clientId].over.dataBuffer.buf = reinterpret_cast<char*>(&tmp);
 	}
 }
 
-void Send_Packet(void* packet) {
+void Send_Packet(char* buf) {
 
 }

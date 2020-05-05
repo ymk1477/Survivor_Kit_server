@@ -13,7 +13,9 @@ using namespace std;
 #define PACKET_SC_LOGIN 100
 #define PACKET_SC_LOCATION 101
 #define PACKET_SC_JUMP 102
+#define PACKET_SC_PLAYERS 103
 
+#define PACKET_CS_LOGIN 200
 #define PACKET_CS_LOCATION 201
 #define PACKET_CS_JUMP 202
 
@@ -48,30 +50,50 @@ typedef struct SENDOBJECT {
 	Location clientLoc[MAX_USER];
 }S_Obj;
 
-typedef struct PLAYER {
-	int clientid;
-	Location clientLoc = { 0 ,0, 0 };
-}Player_Obj;
+typedef struct Info_Player {
+	bool IsUsed[MAX_USER] = { false };
+	Location Loc[MAX_USER];
+	bool IsJump[MAX_USER] = { false };
+}Player;
 
 typedef struct Test_Packet {
 	int packet_type;
 	int i;
 }R_Test;
 
+
 typedef struct Recv_Packet_Location {
 	int packet_type;
 	Location clientLoc;
 }R_Loc;
 
+typedef struct Recv_Packet_Jump {
+	int packet_type;
+	int i;
+}R_Jump;
+
+typedef struct Recv_Packet_Login {
+	int packet_type = PACKET_CS_LOGIN;
+}R_Login;
+
 typedef struct Send_Packet_Login {
 	int packet_type = PACKET_SC_LOGIN;
 	int clientId;
-	bool Player[4];
+	bool Player[MAX_USER] = { false };
 }S_Login;
+
+typedef struct Send_Packet_Players {
+	int packet_type = PACKET_SC_PLAYERS;
+	bool IsUsed[MAX_USER];
+	Location Loc[MAX_USER];
+	bool IsJump[MAX_USER];
+}S_Players;
+
+
 
 void CALLBACK recv_callback(DWORD Error, DWORD dataBytes, LPWSAOVERLAPPED overlapped, DWORD lnFlags);
 void CALLBACK send_callback(DWORD Error, DWORD dataBytes, LPWSAOVERLAPPED overlapped, DWORD lnFlags);
 
 int GetId();
 void Recv_Packet(int clientId, char* buf);
-void Send_Packet(void* packet);
+void Send_Packet(char* buf);
