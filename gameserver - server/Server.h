@@ -80,6 +80,7 @@ typedef struct Send_Packet_Login {
 	int packet_type = PACKET_SC_LOGIN;
 	int clientId;
 	bool Player[MAX_USER] = { false };
+	//Location Loc[MAX_USER];
 }S_Login;
 
 typedef struct Send_Packet_Players {
