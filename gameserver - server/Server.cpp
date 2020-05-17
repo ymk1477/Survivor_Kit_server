@@ -21,40 +21,12 @@ void CALLBACK recv_callback(DWORD Error, DWORD dataBytes, LPWSAOVERLAPPED overla
 	// 클라이언트가 closesocket을 했을 경우
 	if (dataBytes == 0) {
 		closesocket(g_clients[clientId].socket);
-		cout << clientId + 1 << "번 플레이어 나감" << endl;
+		cout << clientId + 1 << "번 플레이어 나감 (recv_callback)" << endl;
 		g_clients[clientId].isUsed = false;
 		recvInform.isUsed[clientId] = false;
 		Player_Info.IsUsed[clientId] = false;
 		return;
 	}
-
-	//R_Test* Test = reinterpret_cast<R_Test*>(g_clients[clientId].over.dataBuffer.buf);
-
-	//if (Test->packet_type == PACKET_CS_LOGIN) {
-	//	cout << clientId + 1 << "번 플레이어 Login! " << endl;
-	//	Player_Info.IsUsed[clientId] = true;
-
-	//	S_Login packet;
-	//	packet.clientId = clientId;
-	//	for (int i = 0; i < MAX_USER; ++i) {
-	//		packet.Player[i] = Player_Info.IsUsed[i];  // 수정
-	//		cout << "플레이어 " << i + 1 << ": " << Player_Info.IsUsed[i] << endl;
-	//	}
-
-	//	for (int i = 0; i < MAX_USER; ++i) {
-	//		if (Player_Info.IsUsed[i]) {
-	//			g_clients[i].over.dataBuffer.len = sizeof(packet);
-	//			memset(&(g_clients[i].over.overlapped), 0x00, sizeof(WSAOVERLAPPED));
-	//			g_clients[i].over.overlapped.hEvent = (HANDLE)i;
-
-	//			g_clients[i].over.dataBuffer.buf = reinterpret_cast<char*>(&packet);
-
-	//			WSASend(g_clients[i].socket, &(g_clients[i].over.dataBuffer), 1, NULL, 0,	 // 수정
-	//				&(g_clients[i].over.overlapped), send_callback);
-	//			cout << i + 1 << "플레이어에게 로그인정보 전달!" << endl;
-	//		}
-	//	}
-	//}
 
 	Recv_Packet(clientId, g_clients[clientId].over.dataBuffer.buf);
 
@@ -77,7 +49,7 @@ void CALLBACK send_callback(DWORD Error, DWORD dataBytes, LPWSAOVERLAPPED overla
 	// 클라이언트가 closesocket을 했을 경우
 	if (dataBytes == 0) {
 		closesocket(g_clients[clientId].socket);
-		cout << clientId + 1 << "번 플레이어 나감" << endl;
+		cout << clientId + 1 << "번 플레이어 나감 (send_callback)" << endl;
 		g_clients[clientId].isUsed = false;
 		sendInform.isUsed[clientId] = false;
 		Player_Info.IsUsed[clientId] = false;
@@ -90,8 +62,10 @@ void CALLBACK send_callback(DWORD Error, DWORD dataBytes, LPWSAOVERLAPPED overla
 	memset(&(g_clients[clientId].over.overlapped), 0x00, sizeof(WSAOVERLAPPED));
 	g_clients[clientId].over.overlapped.hEvent = (HANDLE)clientId;
 
+
 	WSARecv(g_clients[clientId].socket, &g_clients[clientId].over.dataBuffer, 1, 0, &flags,
 		&(g_clients[clientId].over.overlapped), recv_callback);
+
 }
 
 int GetId()
@@ -280,6 +254,37 @@ void Recv_Packet(int clientId, char* buf) {
 						&(g_clients[i].over.overlapped), send_callback);
 				}
 			}
+		}
+		break;
+		case PACKET_CS_PLAYERS:
+		{
+			R_Players* packet = reinterpret_cast<R_Players*>(buf);
+			cout << clientId + 1 << "번 플레이어 정보 RECV !!!" << endl;
+			cout << "//////////////////////////////////////////////////////////////////" << endl;
+
+			Player_Info.Loc[clientId] = packet->Loc;
+			Player_Info.IsJump[clientId] = packet->IsJump;
+
+			S_Players s_packet;
+			for (int i = 0; i < MAX_USER; ++i) {
+				s_packet.IsUsed[i] = Player_Info.IsUsed[i];
+				s_packet.Loc[i] = Player_Info.Loc[i];
+				s_packet.IsJump[i] = Player_Info.IsJump[i];
+			}
+
+			g_clients[clientId].over.dataBuffer.len = sizeof(s_packet);
+			memset(&(g_clients[clientId].over.overlapped), 0x00, sizeof(WSAOVERLAPPED));
+			g_clients[clientId].over.overlapped.hEvent = (HANDLE)clientId;
+
+			g_clients[clientId].over.dataBuffer.buf = reinterpret_cast<char*>(&s_packet);
+
+			for (int i = 0; i < MAX_USER; ++i) {
+				if (Player_Info.IsUsed[i]) {
+					WSASend(g_clients[i].socket, &(g_clients[i].over.dataBuffer), 1, NULL, 0,
+						&(g_clients[i].over.overlapped), send_callback);
+				}
+			}
+
 		}
 		break;
 		}

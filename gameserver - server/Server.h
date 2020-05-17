@@ -21,6 +21,7 @@ using namespace std;
 #define PACKET_CS_LOGIN 200
 #define PACKET_CS_LOCATION 201
 #define PACKET_CS_JUMP 202
+#define PACKET_CS_PLAYERS 203
 
 typedef struct LOCATION {
 	float x;
@@ -104,6 +105,11 @@ typedef struct Send_Packet_Players {
 	bool IsJump[MAX_USER];
 }S_Players;
 
+typedef struct Recv_Packet_Players {
+	int packet_type = PACKET_CS_PLAYERS;
+	Location Loc;
+	bool IsJump;
+}R_Players;
 
 void CALLBACK recv_callback(DWORD Error, DWORD dataBytes, LPWSAOVERLAPPED overlapped, DWORD lnFlags);
 void CALLBACK send_callback(DWORD Error, DWORD dataBytes, LPWSAOVERLAPPED overlapped, DWORD lnFlags);
